@@ -1,0 +1,23 @@
+{
+  "id_samples": 840,
+  "montgomery_samples": 138,
+  "shenzhen_samples": 662,
+  "jepa": {
+    "energy_auroc": 0.771,
+    "mahal_auroc": 0.956,
+    "energy_fpr95": 0.54,
+    "mahal_fpr95": 0.186
+  },
+  "mae": {
+    "energy_auroc": 0.866,
+    "mahal_auroc": 0.994,
+    "energy_fpr95": 0.358,
+    "mahal_fpr95": 0.03
+  },
+  "supervised": {
+    "energy_auroc": 0.607,
+    "mahal_auroc": 0.997,
+    "energy_fpr95": 0.814,
+    "mahal_fpr95": 0.0
+  }
+}

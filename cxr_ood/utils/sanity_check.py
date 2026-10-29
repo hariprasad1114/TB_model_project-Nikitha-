@@ -411,6 +411,8 @@ def visualize_samples(root_path, save_path='sample_images.png'):
         img = dataset[i]
         if isinstance(img, torch.Tensor):
             img = img.permute(1, 2, 0).numpy()
+        elif not hasattr(img, "numpy"):
+            img = np.asarray(img)  # PIL Image -> ndarray
         
         ax.imshow(img, cmap='gray' if len(img.shape) == 2 else None)
         ax.set_title(f'Image {i} ({dataset.dataset_sources[i]})')

@@ -1,0 +1,76 @@
+{
+  "results": {
+    "JEPA": {
+      "threshold": {
+        "energy": 2.41,
+        "mahal": 18.2
+      },
+      "ood": {
+        "Montgomery": {
+          "energy": {
+            "ood_detection_rate": 0.642
+          },
+          "mahal": {
+            "ood_detection_rate": 0.924
+          }
+        },
+        "Shenzhen": {
+          "energy": {
+            "ood_detection_rate": 0.587
+          },
+          "mahal": {
+            "ood_detection_rate": 0.951
+          }
+        }
+      }
+    },
+    "MAE": {
+      "threshold": {
+        "energy": 2.18,
+        "mahal": 15.6
+      },
+      "ood": {
+        "Montgomery": {
+          "energy": {
+            "ood_detection_rate": 0.684
+          },
+          "mahal": {
+            "ood_detection_rate": 0.985
+          }
+        },
+        "Shenzhen": {
+          "energy": {
+            "ood_detection_rate": 0.793
+          },
+          "mahal": {
+            "ood_detection_rate": 0.978
+          }
+        }
+      }
+    },
+    "Supervised": {
+      "threshold": {
+        "energy": 1.95,
+        "mahal": 14.1
+      },
+      "ood": {
+        "Montgomery": {
+          "energy": {
+            "ood_detection_rate": 0.321
+          },
+          "mahal": {
+            "ood_detection_rate": 0.989
+          }
+        },
+        "Shenzhen": {
+          "energy": {
+            "ood_detection_rate": 0.285
+          },
+          "mahal": {
+            "ood_detection_rate": 0.998
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "experiment_info": {
+    "date": "2026-10-28",
+    "id_train_samples": 3360,
+    "id_val_samples": 840,
+    "ood_montgomery_samples": 138,
+    "ood_shenzhen_samples": 662,
+    "seed": 42,
+    "epochs": 50
+  },
+  "methods": {
+    "JEPA": {
+      "best_epoch": 48,
+      "id": {
+        "auroc": 0.939,
+        "accuracy": 0.917,
+        "ece": 0.029,
+        "nll": 0.206
+      },
+      "ood": {
+        "Montgomery": {
+          "energy_auroc": 0.771,
+          "energy_fpr95": 0.54,
+          "mahal_auroc": 0.956,
+          "mahal_fpr95": 0.186
+        },
+        "Shenzhen": {
+          "energy_auroc": 0.718,
+          "energy_fpr95": 0.633,
+          "mahal_auroc": 0.985,
+          "mahal_fpr95": 0.077
+        }
+      }
+    },
+    "MAE": {
+      "best_epoch": 50,
+      "id": {
+        "auroc": 0.993,
+        "accuracy": 0.971,
+        "ece": 0.013,
+        "nll": 0.085
+      },
+      "ood": {
+        "Montgomery": {
+          "energy_auroc": 0.769,
+          "energy_fpr95": 0.577,
+          "mahal_auroc": 0.994,
+          "mahal_fpr95": 0.03
+        },
+        "Shenzhen": {
+          "energy_auroc": 0.866,
+          "energy_fpr95": 0.358,
+          "mahal_auroc": 0.984,
+          "mahal_fpr95": 0.085
+        }
+      }
+    },
+    "Supervised": {
+      "best_epoch": 45,
+      "id": {
+        "auroc": 0.996,
+        "accuracy": 0.98,
+        "ece": 0.007,
+        "nll": 0.064
+      },
+      "ood": {
+        "Montgomery": {
+          "energy_auroc": 0.607,
+          "energy_fpr95": 0.814,
+          "mahal_auroc": 0.991,
+          "mahal_fpr95": 0.024
+        },
+        "Shenzhen": {
+          "energy_auroc": 0.582,
+          "energy_fpr95": 0.931,
+          "mahal_auroc": 0.997,
+          "mahal_fpr95": 0.0
+        }
+      }
+    }
+  }
+}

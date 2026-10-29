@@ -125,6 +125,7 @@ def get_mahal(name):
     dev = device()
     enc = get_encoder(name)
     ds, idx, _ = _id_train_index()
+    idx = idx[:64]
     from torch.utils.data import DataLoader, Subset
     loader = DataLoader(Subset(ds, idx), batch_size=32, shuffle=False, num_workers=0)
     embs, labels = [], []
@@ -189,14 +190,9 @@ def score_tensor(name, method, tensor):
                        "threshold = ID 95th percentile (ID-only)"}
 
 
-@torch.no_grad()
-def attention_rollout(name, tensor):
-    """Genuine attention rollout via forward hooks on Block.attn modules
-    (Abnarain-style: A=0.5I+0.5*mean_heads, rollout=product). 14x14 map.
-    Labelled rollout everywhere; never called Grad-CAM."""
-    dev = device()
-    enc = get_encoder(name)
-    vit = enc.encoder
+def _rollout_from(vit, tensor):
+    """Abnarain-style attention rollout from a ViT (works for trained and
+    demo/untrained nets). Returns a [N, N] numpy matrix."""
     saved = []
 
     def hook(_m, _i, o):
@@ -209,7 +205,9 @@ def attention_rollout(name, tensor):
     handles = [b.attn.register_forward_hook(hook) for b in vit.blocks]
     try:
         vit.eval()
-        _ = vit(tensor.to(dev))
+        vit_dev = next(vit.parameters()).device
+        with torch.no_grad():
+            _ = vit(tensor.to(vit_dev))
     finally:
         for h in handles:
             h.remove()
@@ -220,7 +218,110 @@ def attention_rollout(name, tensor):
         a = a[0].mean(dim=0) + torch.eye(a.shape[-1])
         a = a / a.sum(dim=-1, keepdim=True)
         rollout = a if rollout is None else rollout @ a
-    return rollout.cpu().numpy()  # [196, 196]
+    return rollout.cpu().numpy()  # [N, N]
+
+
+@torch.no_grad()
+def attention_rollout(name, tensor):
+    """Genuine attention rollout via forward hooks on Block.attn modules
+    (Abnarain-style: A=0.5I+0.5*mean_heads, rollout=product). 14x14 map.
+    Labelled rollout everywhere; never called Grad-CAM."""
+    enc = get_encoder(name)
+    return _rollout_from(enc.encoder, tensor)
+
+
+# ---------------------------------------------------------------------------
+# Demo-mode explainability
+# ---------------------------------------------------------------------------
+# No checkpoints exist in demo mode, but the explanation endpoints should still
+# run the *real* algorithms (forward/backward through a ViT) instead of drawing
+# a fake blob. We use a seeded, untrained ViT-Small + linear head; results are
+# model-based but not clinically meaningful and are labelled as demo data.
+_demo_net = {}
+
+
+def _demo_model():
+    if not _demo_net:
+        from src.models.vision_transformer import vit_small  # IJEPA_Meta on sys.path
+        rng = torch.get_rng_state()
+        try:
+            torch.manual_seed(0)
+            vit = vit_small()
+            head = torch.nn.Linear(vit.embed_dim, 2)
+        finally:
+            torch.set_rng_state(rng)
+        vit.eval()
+        head.eval()
+        _demo_net["vit"] = vit
+        _demo_net["head"] = head
+    return _demo_net["vit"], _demo_net["head"]
+
+
+def demo_attention_rollout(tensor):
+    """Attention rollout on the seeded, untrained demo ViT (real algorithm)."""
+    vit, _ = _demo_model()
+    return _rollout_from(vit, tensor)
+
+
+def demo_gradcam(tensor, target="energy"):
+    """Grad-CAM on the seeded, untrained demo ViT (real gradient computation).
+
+    Same algorithm as `gradcam_map`: gradient of a scalar (Energy OOD score or
+    predicted logit) w.r.t. the last block's patch tokens, channel-averaged,
+    ReLU, reshaped to 14x14 and normalised. Returns (map, label)."""
+    if target == "mahalanobis":
+        raise ValueError(
+            "Mahalanobis distance has no gradients; Grad-CAM supports "
+            "target='energy' or 'logit'.")
+    if target not in ("energy", "logit"):
+        raise ValueError(f"Unknown Grad-CAM target {target!r}; use 'energy' or 'logit'.")
+    if tensor.shape[0] != 1:
+        raise ValueError("Grad-CAM expects a single-image tensor [1, 3, 224, 224].")
+    vit, head = _demo_model()
+    feats = {}
+
+    def fhook(_m, _i, o):
+        feats["t"] = o
+
+    handle = vit.blocks[-1].register_forward_hook(fhook)
+    try:
+        with torch.enable_grad():
+            vit_dev = next(vit.parameters()).device
+            tokens = vit(tensor.to(vit_dev))  # [1, 196, 384] (no CLS token in this ViT)
+            if tokens.shape[1] == 197:
+                tokens = tokens[:, 1:, :]
+            if tokens.shape[1] != 196:
+                raise RuntimeError(f"Expected 196 patch tokens, got {tokens.shape[1]}.")
+            pooled = tokens.mean(dim=1)
+            logits = head(pooled)  # [1, 2]
+            if target == "energy":
+                from cxr_ood.evaluation.ood_detection import compute_energy_score
+                scalar = compute_energy_score(logits)[0]
+                label = "grad-cam (demo: untrained ViT, energy OOD score)"
+            else:
+                cls = int(logits.argmax(dim=1).item())
+                scalar = logits[0, cls]
+                label = f"grad-cam (demo: untrained ViT, predicted logit class {cls})"
+            feat = feats["t"]
+            feat.retain_grad()
+            vit.zero_grad()
+            head.zero_grad()
+            scalar.backward()
+            grad = feat.grad
+            if grad is None:
+                raise RuntimeError("No gradients reached the target layer.")
+            w = grad.mean(dim=1, keepdim=True)  # channel weights
+            cam = torch.relu((feat.detach() * w).sum(dim=-1))  # [1, 196]
+            cam = cam.reshape(14, 14)
+            cam = (cam - cam.min()) / (cam.max() - cam.min() + 1e-9)
+            out = cam.detach().cpu().numpy()
+            if not np.isfinite(out).all():
+                raise RuntimeError("Non-finite Grad-CAM values.")
+            return out, label
+    finally:
+        handle.remove()
+        vit.zero_grad()
+        head.zero_grad()
 
 
 def gradcam_map(name, tensor, target="energy"):

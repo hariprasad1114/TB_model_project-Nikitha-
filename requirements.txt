@@ -3,6 +3,7 @@ torchvision
 pyyaml
 numpy
 opencv-python
+scikit-image
 scikit-learn
 matplotlib
 pandas

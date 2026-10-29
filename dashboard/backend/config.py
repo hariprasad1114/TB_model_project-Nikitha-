@@ -15,6 +15,7 @@ DATA_ROOT = _p("DATA_ROOT", "Datasets/CXR")
 CHECKPOINT_DIR = _p("CHECKPOINT_DIR", "experiments/cxr_5pct")
 RESULTS_DIR = _p("RESULTS_DIR", "experiments/cxr_5pct")
 CACHE_DIR = REPO_ROOT / "dashboard" / "backend" / ".cache"
+ECHO_CHECKPOINT = _p("ECHO_CHECKPOINT", "experiments/echo_seg_demo/best_model.pth")
 
 CHECKPOINTS = {
     "jepa": CHECKPOINT_DIR / "checkpoint_latest.pth",
@@ -34,5 +35,5 @@ RESULT_FILES = {
 SPLIT_FILE = RESULTS_DIR / "linear_probe" / "dataset_split.json"
 
 MAX_UPLOAD_MB = 10
-ID_SCORE_CAP = 200
+ID_SCORE_CAP = 40
 TPR_TARGET = 0.95

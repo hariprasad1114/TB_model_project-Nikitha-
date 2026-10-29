@@ -98,6 +98,34 @@ def test_rollout_untouched():
     assert np.isfinite(r).all()
 
 
+def test_demo_gradcam_energy_shape_label():
+    m, label = I.demo_gradcam(_tensor(), target="energy")
+    assert m.shape == (14, 14) and np.isfinite(m).all()
+    assert m.min() >= 0.0 and m.max() <= 1.0 + 1e-6
+    assert "demo" in label and "energy" in label, label
+
+
+def test_demo_gradcam_logit_shape_label():
+    m, label = I.demo_gradcam(_tensor(), target="logit")
+    assert m.shape == (14, 14) and np.isfinite(m).all()
+    assert "demo" in label and "logit" in label, label
+
+
+def test_demo_gradcam_rejects_mahalanobis():
+    try:
+        I.demo_gradcam(_tensor(), target="mahalanobis")
+    except ValueError as e:
+        assert "no gradients" in str(e), e
+    else:
+        raise AssertionError("mahalanobis target not rejected")
+
+
+def test_demo_rollout_shape():
+    r = I.demo_attention_rollout(_tensor())
+    assert isinstance(r, np.ndarray) and r.shape == (196, 196), r.shape
+    assert np.isfinite(r).all()
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items())
            if k.startswith("test_") and callable(v)]

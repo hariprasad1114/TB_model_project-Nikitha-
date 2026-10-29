@@ -13,7 +13,9 @@ async function postImage(path, file, params = {}) {
   const r = await fetch(`${BASE}${path}${qs ? `?${qs}` : ''}`, { method: 'POST', body: fd });
   if (!r.ok) {
     const t = await r.text();
-    throw new Error(t || `${path}: ${r.status}`);
+    let msg = t;  // FastAPI sends {"detail": "..."} for 4xx/404
+    try { msg = JSON.parse(t).detail || t; } catch { /* not JSON */ }
+    throw new Error(msg || `${path}: ${r.status}`);
   }
   return r.json();
 }
@@ -25,6 +27,8 @@ export const api = {
   scoreDist: (model, method) => get(`/api/score-distribution?model=${model}&method=${method}`),
   predict: (file, model, method) => postImage('/api/predict', file, { model, method }),
   compare: (file, method) => postImage('/api/compare', file, { method }),
+  echoStatus: () => get('/api/echo/status'),
+  echoSegment: (file, threshold) => postImage('/api/echo/segment', file, { threshold }),
   attentionUrl: (file, model) => ({ file, model }),
   alerts: () => get('/api/alerts'),
   ack: async (id) => {

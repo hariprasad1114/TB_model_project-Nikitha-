@@ -114,12 +114,22 @@ class CXRDataset(Dataset):
                 logger.warning(f"TB Database not found at {tb_path}")
     
     def _add_images_from_folder(self, folder, source_name):
-        """Add all valid images from a folder."""
+        """Add all valid images from a folder.
+
+        Dedupes by normalized absolute path: glob patterns are case-insensitive
+        on Windows, so a '*.png' and '*.PNG' pattern can return the same file.
+        """
+        added = set()
         for ext in self.SUPPORTED_EXTENSIONS:
             pattern = os.path.join(folder, f'*{ext}')
             files = glob.glob(pattern)
-            self.image_paths.extend(files)
-            self.dataset_sources.extend([source_name] * len(files))
+            for f in files:
+                key = os.path.normcase(os.path.abspath(f))
+                if key in added:
+                    continue
+                added.add(key)
+                self.image_paths.append(f)
+                self.dataset_sources.append(source_name)
     
     def _log_dataset_stats(self):
         """Log statistics about the collected dataset."""
